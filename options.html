@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Article Summarizer Options</title>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      padding: 40px;
+      max-width: 600px;
+      margin: 0 auto;
+      color: #1a1a1a;
+      line-height: 1.6;
+      background-color: #fafafa;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #1a1a1a;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 15px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 15px;
+    }
+    
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 15px;
+      background-color: white;
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23555555%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 12px;
+    }
+    
+    button {
+      padding: 12px 20px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 15px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    
+    .status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      display: none;
+    }
+    
+    .success {
+      background-color: #dcfce7;
+      color: #166534;
+      border-left: 4px solid #16a34a;
+    }
+    
+    .error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-left: 4px solid #dc2626;
+    }
+    
+    .info-section {
+      margin-top: 40px;
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .info-section h3 {
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    
+    .api-info {
+      margin-bottom: 12px;
+    }
+    
+    .api-info strong {
+      font-weight: 500;
+    }
+    
+    a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Article Summarizer Settings</h1>
+  
+  <div class="form-group">
+    <label for="apiType">Active AI Service</label>
+    <select id="apiType">
+      <option value="openai">OpenAI (GPT)</option>
+      <option value="gemini">Google Gemini</option>
+      <option value="deepseek">DeepSeek</option>
+    </select>
+  </div>
+  
+  <!-- OpenAI Settings -->
+  <div id="openai-settings" class="api-settings-group">
+    <h3>OpenAI Settings</h3>
+    <div class="form-group">
+      <label for="openai-apiKey">API Key</label>
+      <input type="password" id="openai-apiKey" placeholder="Enter your OpenAI API key (sk-...)">
+    </div>
+    <div class="form-group">
+      <label for="openai-model">Model Name</label>
+      <input type="text" id="openai-model" placeholder="e.g., gpt-5-nano-2025-08-07">
+    </div>
+  </div>
+
+  <!-- Gemini Settings -->
+  <div id="gemini-settings" class="api-settings-group">
+    <h3>Google Gemini Settings</h3>
+    <div class="form-group">
+      <label for="gemini-apiKey">API Key</label>
+      <input type="password" id="gemini-apiKey" placeholder="Enter your Google Gemini API key">
+    </div>
+    <div class="form-group">
+      <label for="gemini-model">Model Name</label>
+      <input type="text" id="gemini-model" placeholder="e.g., gemini-2.5-flash-lite">
+    </div>
+  </div>
+  
+  <!-- DeepSeek Settings -->
+  <div id="deepseek-settings" class="api-settings-group">
+    <h3>DeepSeek Settings</h3>
+    <div class="form-group">
+      <label for="deepseek-apiKey">API Key</label>
+      <input type="password" id="deepseek-apiKey" placeholder="Enter your DeepSeek API key">
+    </div>
+    <div class="form-group">
+      <label for="deepseek-model">Model Name</label>
+      <input type="text" id="deepseek-model" placeholder="e.g., deepseek-chat">
+    </div>
+  </div>
+
+  <button id="saveBtn">Save Settings</button>
+  
+  <div id="status" class="status"></div>
+  
+  <div class="info-section">
+    <h3>How to Get Started</h3>
+    
+    <div class="api-info">
+      <strong>OpenAI:</strong> Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API Keys</a> to create an account and generate a key.
+    </div>
+    
+    <div class="api-info">
+      <strong>Google Gemini:</strong> Visit <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> to create an account and get an API key.
+    </div>
+    
+    <div class="api-info" style="margin-top: 20px;">
+      <strong>Need help?</strong> If you encounter any issues, please create an issue on GitHub.
+    </div>
+  </div>
+  
+  <script src="js/options.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+    "name": "Article Summarizer",
+    "version": "1.0",
+    "description": "Summarize web articles using OpenAI or Google's Gemini",
+    "permissions": ["activeTab", "storage", "scripting"],
+    "host_permissions": ["<all_urls>"],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": "icons/icon.png"
+    },
+    "options_page": "options.html",
+    "background": {
+      "service_worker": "js/background.js"
+    },
+    "manifest_version": 3
+  }
