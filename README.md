@@ -48,3 +48,5 @@ This extension allows you to quickly summarize web articles using your own API k
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue for any bugs or feature requests.
+
+This project is licensed under the Apache License 2.0 - see the LICENSE file for details
