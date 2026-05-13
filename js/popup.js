@@ -1,192 +1,329 @@
-document.addEventListener('DOMContentLoaded', function() {
-  const summarizeBtn = document.getElementById('summarizeBtn');
-  const summaryElement = document.getElementById('summary');
-  const loaderElement = document.getElementById('loader');
-  const summaryTypeElement = document.getElementById('summaryType');
-  const statusBadge = document.getElementById('statusBadge');
-  const wordCountElement = document.getElementById('wordCount');
-  const optionsLink = document.getElementById('optionsLink');
-  const currentModelElement = document.getElementById('currentModel');
+import { PROVIDERS, SUMMARY_TYPES } from './shared/config.js';
+import { getSettings } from './shared/storage.js';
 
-  // Function to load and display the current model
-  function loadCurrentModel() {
-    // These defaults should be aligned with options.js and background.js
-    const defaultSettings = {
-        apiType: 'openai',
-        openai: { apiKey: '', model: 'gpt-4o-mini' },
-        gemini: { apiKey: '', model: 'gemini-1.5-flash-latest' },
-        deepseek: { apiKey: '', model: 'deepseek-chat' }
-    };
-    chrome.storage.sync.get(defaultSettings, (settings) => {
-      const apiType = settings.apiType;
-      const model = settings[apiType].model;
-      if (currentModelElement) {
-        const displayModel = model || 'Not Set';
-        currentModelElement.textContent = `Using: ${displayModel}`;
-        currentModelElement.title = displayModel; // Tooltip for long names
-      }
-    });
-  }
+const summarizeBtn = document.getElementById('summarizeBtn');
+const summaryElement = document.getElementById('summary');
+const summaryModeRowElement = document.getElementById('summaryModeRow');
+const statusElement = document.getElementById('status');
+const statusIconElement = document.getElementById('statusIcon');
+const statusMessageElement = document.getElementById('statusMessage');
+const wordCountElement = document.getElementById('wordCount');
+const optionsLink = document.getElementById('optionsLink');
+const currentModelElement = document.getElementById('currentModel');
+const providerChipLabelElement = document.getElementById('providerChipLabel');
+const providerEndpointElement = document.getElementById('providerEndpoint');
 
-  // Load the model name when the popup opens
-  loadCurrentModel();
+const POPUP_STATE_STORAGE_KEY = 'articleSummarizerPopupState';
 
-  // Listen for changes in storage (e.g., user saves new options)
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync') {
-      loadCurrentModel();
-    }
-  });
-  
-  // Open options page when link is clicked
-  optionsLink.addEventListener('click', function(e) {
-    e.preventDefault();
+let isSubmitting = false;
+let selectedSummaryType = 'concise';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  renderSummaryTypeChips();
+  bindEvents();
+  await hydratePopupState();
+  await refreshProviderMeta();
+  summarizeBtn.focus();
+});
+
+function bindEvents() {
+  optionsLink.addEventListener('click', (event) => {
+    event.preventDefault();
     chrome.runtime.openOptionsPage();
   });
-  
-  summarizeBtn.addEventListener('click', async function() {
-    // Show loader, update status
-    loaderElement.style.display = 'block';
-    statusBadge.textContent = 'Extracting content...';
-    statusBadge.className = 'status-badge';
-    statusBadge.style.display = 'inline-flex';
-    summaryElement.textContent = '';
-    wordCountElement.textContent = '';
-    
-    // Get current tab
-    const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-    
-    // Get selected summary type
-    const summaryType = summaryTypeElement.value;
-    
-    // Execute content script to get page content
-    chrome.scripting.executeScript({
-      target: {tabId: tab.id},
-      function: extractPageContent
-    }, async (results) => {
-      if (chrome.runtime.lastError || !results || !results[0]) {
-        showError('Error extracting content: ' + (chrome.runtime.lastError ? chrome.runtime.lastError.message : 'Unknown error'));
-        return;
-      }
-      
-      const content = results[0].result;
-      
-      if (!content || content.length < 50) {
-        showError('Could not extract meaningful content from this page.');
-        return;
-      }
-      
-      statusBadge.textContent = 'Generating summary...';
-      
-      // Send message to background script to perform summarization
-      chrome.runtime.sendMessage({
-        type: 'summarize',
-        payload: {
-          content: content,
-          url: tab.url,
-          summaryType: summaryType
-        }
-      }, (response) => {
-        loaderElement.style.display = 'none';
 
-        if (chrome.runtime.lastError) {
-          showError('Error: ' + chrome.runtime.lastError.message);
+  summaryModeRowElement.addEventListener('click', async (event) => {
+    const chip = event.target.closest('[data-summary-type]');
+    if (!chip) {
+      return;
+    }
+
+    const wasSelected = chip.dataset.summaryType === selectedSummaryType;
+    selectedSummaryType = chip.dataset.summaryType;
+    updateSummaryTypeUI();
+    await savePopupState();
+
+    if (!wasSelected && !isSubmitting) {
+      void triggerSummarize();
+    }
+  });
+
+  summarizeBtn.addEventListener('click', () => {
+    void triggerSummarize();
+  });
+
+  chrome.storage.onChanged.addListener(async (changes, areaName) => {
+    if (areaName === 'local' && changes.articleSummarizerSettings) {
+      await refreshProviderMeta();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.repeat && !isSubmitting) {
+      event.preventDefault();
+      void triggerSummarize();
+    }
+  });
+}
+
+function renderSummaryTypeChips() {
+  summaryModeRowElement.innerHTML = Object.entries(SUMMARY_TYPES).map(([value, meta]) => `
+    <button class="mode-chip" type="button" data-summary-type="${value}" aria-pressed="false">
+      <strong>${meta.label}</strong>
+      <span>${meta.helper}</span>
+    </button>
+  `).join('');
+  updateSummaryTypeUI();
+}
+
+function updateSummaryTypeUI() {
+  for (const chip of summaryModeRowElement.querySelectorAll('[data-summary-type]')) {
+    const isActive = chip.dataset.summaryType === selectedSummaryType;
+    chip.classList.toggle('active', isActive);
+    chip.setAttribute('aria-pressed', String(isActive));
+  }
+}
+
+async function hydratePopupState() {
+  try {
+    const storedState = await chrome.storage.local.get(POPUP_STATE_STORAGE_KEY);
+    const savedType = storedState?.[POPUP_STATE_STORAGE_KEY]?.summaryType;
+    if (savedType && SUMMARY_TYPES[savedType]) {
+      selectedSummaryType = savedType;
+      updateSummaryTypeUI();
+    }
+  } catch (_error) {
+    updateSummaryTypeUI();
+  }
+}
+
+async function savePopupState() {
+  try {
+    await chrome.storage.local.set({
+      [POPUP_STATE_STORAGE_KEY]: {
+        summaryType: selectedSummaryType
+      }
+    });
+  } catch (_error) {
+    // Ignore preference-save failures to keep the summarize flow fast.
+  }
+}
+
+async function triggerSummarize() {
+  if (isSubmitting) {
+    return;
+  }
+
+  isSubmitting = true;
+  summarizeBtn.disabled = true;
+
+  try {
+    await ensureBackgroundReady();
+    clearSummary();
+    setStatus('info', 'Extracting article content...', true);
+
+    const tab = await getActiveTab();
+    const content = await extractContentFromTab(tab.id);
+
+    if (!content || content.trim().length < 120) {
+      throw new Error('This page does not expose enough readable article content to summarize.');
+    }
+
+    setStatus('info', 'Sending content to your selected provider...', true);
+
+    const response = await sendRuntimeMessage({
+      type: 'summarize',
+      payload: {
+        content,
+        url: tab.url,
+        summaryType: selectedSummaryType
+      }
+    });
+
+    if (response?.status !== 'success' || !response.data) {
+      throw new Error(response?.message || 'The summarization request failed.');
+    }
+
+    renderSummary(response.data);
+    setStatus('success', 'Summary ready.', false);
+  } catch (error) {
+    renderError(error instanceof Error ? error.message : 'Unknown error');
+  } finally {
+    isSubmitting = false;
+    summarizeBtn.disabled = false;
+  }
+}
+
+async function refreshProviderMeta() {
+  const settings = await getSettings();
+  const provider = PROVIDERS[settings.apiType];
+  const model = settings[settings.apiType]?.model || provider.defaultModel;
+
+  providerChipLabelElement.textContent = provider.label;
+  providerEndpointElement.textContent = provider.endpointLabel;
+  currentModelElement.textContent = model;
+}
+
+async function getActiveTab() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs?.[0];
+
+  if (!tab?.id || !tab.url) {
+    throw new Error('No active browser tab is available.');
+  }
+
+  if (!/^https?:/i.test(tab.url)) {
+    throw new Error('Open a standard web article page before running a summary.');
+  }
+
+  return tab;
+}
+
+async function extractContentFromTab(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: extractPageContent
+  });
+
+  return results?.[0]?.result || '';
+}
+
+function renderSummary(summary) {
+  marked.setOptions({
+    gfm: true,
+    breaks: true
+  });
+
+  const rendered = DOMPurify.sanitize(marked.parse(summary));
+  summaryElement.innerHTML = rendered;
+  wordCountElement.textContent = `${countWords(summary)} words`;
+}
+
+function renderError(message) {
+  summaryElement.innerHTML = `<div class="summary-placeholder">${escapeHtml(message)}</div>`;
+  wordCountElement.textContent = 'No output';
+  setStatus('error', message, false);
+}
+
+function clearSummary() {
+  summaryElement.innerHTML = '<div class="summary-placeholder">Working on your summary...</div>';
+  wordCountElement.textContent = 'Generating...';
+}
+
+function setStatus(type, message, showSpinner) {
+  statusElement.className = `status ${type} visible`;
+  statusMessageElement.textContent = message;
+  statusIconElement.style.display = showSpinner ? 'inline-block' : 'none';
+}
+
+function countWords(text) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function sendRuntimeMessage(message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        const runtimeMessage = chrome.runtime.lastError.message || 'Unknown runtime error';
+        if (/Receiving end does not exist/i.test(runtimeMessage)) {
+          reject(new Error('The extension background worker is unavailable. Reload the extension in chrome://extensions and try again.'));
           return;
         }
 
-        if (response.status === 'success') {
-          renderSummary(response.data);
-        } else {
-          showError('Error: ' + response.message);
-        }
-      });
+        reject(new Error(runtimeMessage));
+        return;
+      }
+
+      resolve(response);
     });
   });
-  
-  function renderSummary(summary) {
-    // Configure marked to handle LaTeX
-    marked.setOptions({
-      renderer: new marked.Renderer(),
-      gfm: true,
-      breaks: true,
-      sanitize: false,
-      smartLists: true,
-      smartypants: true
-    });
+}
 
-    // Render markdown content with sanitization
-    summaryElement.innerHTML = DOMPurify.sanitize(marked.parse(summary));
-
-    // Show success status and word count
-    statusBadge.textContent = 'Summary generated';
-    statusBadge.className = 'status-badge success';
-    
-    const wordCount = summary.split(/\s+/).length;
-    wordCountElement.textContent = `${wordCount} words`;
-    
-    // Hide status after a delay
-    setTimeout(() => {
-      statusBadge.style.display = 'none';
-    }, 3000);
+async function ensureBackgroundReady() {
+  const response = await sendRuntimeMessage({ type: 'ping' });
+  if (response?.status !== 'success') {
+    throw new Error('The extension background worker did not respond.');
   }
-
-  function showError(message) {
-    statusBadge.textContent = message;
-    statusBadge.className = 'status-badge error';
-    summaryElement.textContent = message;
-    loaderElement.style.display = 'none';
-    
-    // Hide error after delay
-    setTimeout(() => {
-      statusBadge.style.display = 'none';
-    }, 5000);
-  }
-});
+}
 
 function extractPageContent() {
-  // Try to find the most relevant content container
-  function getTextContent(element) {
-    return element.textContent.trim().replace(/\s+/g, ' ');
-  }
-  
-  // Prioritized selectors for article content
-  const contentSelectors = [
-    'article', 
+  const blockedTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'HEADER', 'FOOTER']);
+  const candidateSelectors = [
+    'article',
     '[role="article"]',
-    '.article-content', 
+    'main article',
+    'main',
+    '.article-content',
     '.post-content',
     '.entry-content',
-    '.content-article',
+    '.story-body',
     '#article-body',
-    'main',
-    '.main-content'
+    '[itemprop="articleBody"]'
   ];
-  
-  // Find the first matching selector with substantial content
-  for (const selector of contentSelectors) {
-    const elements = document.querySelectorAll(selector);
-    for (const element of elements) {
-      const content = getTextContent(element);
-      if (content.length > 250) {
-        return content;
+
+  function normalizedText(node) {
+    return (node?.innerText || node?.textContent || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
+  }
+
+  function scoreElement(element) {
+    const text = normalizedText(element);
+    if (text.length < 300) {
+      return { text, score: 0 };
+    }
+
+    const paragraphs = element.querySelectorAll('p').length;
+    const headings = element.querySelectorAll('h1, h2, h3').length;
+    const links = element.querySelectorAll('a').length;
+    const textDensity = text.length / Math.max(element.querySelectorAll('*').length, 1);
+    const score = text.length + (paragraphs * 120) + (headings * 80) + Math.min(textDensity * 10, 400) - (links * 8);
+    return { text, score };
+  }
+
+  const clonedBody = document.body.cloneNode(true);
+  clonedBody.querySelectorAll('*').forEach((node) => {
+    if (
+      blockedTags.has(node.tagName) ||
+      node.matches('nav, aside, form, button, [aria-hidden="true"], [role="navigation"], [role="complementary"], .sidebar, .related, .advertisement, .ads, .share, .social, .newsletter')
+    ) {
+      node.remove();
+    }
+  });
+
+  let best = { text: '', score: 0 };
+
+  for (const selector of candidateSelectors) {
+    const matches = clonedBody.querySelectorAll(selector);
+    for (const match of matches) {
+      const candidate = scoreElement(match);
+      if (candidate.score > best.score) {
+        best = candidate;
       }
     }
   }
-  
-  // Fallback: look for paragraphs
-  const paragraphs = Array.from(document.querySelectorAll('p'));
-  if (paragraphs.length > 3) {
-    // Get paragraphs that have reasonable length (to filter out nav/footer text)
-    const contentParagraphs = paragraphs
-      .filter(p => getTextContent(p).length > 50)
-      .map(p => getTextContent(p))
-      .join('\n\n');
-      
-    if (contentParagraphs.length > 250) {
-      return contentParagraphs;
-    }
+
+  if (best.score > 0) {
+    return best.text.slice(0, 40000);
   }
-  
-  // Last resort: just get body text
-  return document.body.innerText.substring(0, 30000);
+
+  const paragraphs = Array.from(clonedBody.querySelectorAll('p'))
+    .map((paragraph) => normalizedText(paragraph))
+    .filter((paragraph) => paragraph.length > 80)
+    .join('\n\n');
+
+  if (paragraphs.length >= 300) {
+    return paragraphs.slice(0, 40000);
+  }
+
+  return normalizedText(clonedBody).slice(0, 40000);
 }

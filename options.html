@@ -1,195 +1,494 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Article Summarizer Options</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article Summarizer Settings</title>
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f1eb;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: #ffffff;
+      --ink: #1d1d17;
+      --muted: #676655;
+      --line: rgba(29, 29, 23, 0.1);
+      --accent: #0c5b5f;
+      --accent-soft: rgba(12, 91, 95, 0.1);
+      --success: #1c6f49;
+      --danger: #a53429;
+      --shadow: 0 24px 60px rgba(31, 27, 17, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: 'Inter', -apple-system, system-ui, sans-serif;
-      padding: 40px;
-      max-width: 600px;
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(203, 170, 95, 0.2), transparent 30%),
+        radial-gradient(circle at 100% 0%, rgba(12, 91, 95, 0.18), transparent 25%),
+        linear-gradient(180deg, #f9f5ec 0%, #f4f2ec 45%, #eef1ea 100%);
+    }
+
+    main {
+      max-width: 1080px;
       margin: 0 auto;
-      color: #1a1a1a;
-      line-height: 1.6;
-      background-color: #fafafa;
+      padding: 40px 24px 56px;
     }
-    
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .hero-card,
+    .settings-card,
+    .provider-card,
+    .info-card {
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 30px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -34px -44px auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(12, 91, 95, 0.22), transparent 68%);
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
     h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 30px;
-      color: #1a1a1a;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 15px;
+      margin: 18px 0 10px;
+      font-size: 40px;
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      max-width: 520px;
     }
-    
-    .form-group {
+
+    .hero-copy,
+    .info-copy {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .info-card {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+    }
+
+    .info-pill {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid var(--line);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .settings-card {
+      padding: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.1;
+    }
+
+    .section-copy {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
       margin-bottom: 24px;
     }
-    
+
+    .provider-card {
+      padding: 18px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      border: 1px solid var(--line);
+    }
+
+    .provider-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .provider-card.active {
+      border-color: rgba(12, 91, 95, 0.28);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(12, 91, 95, 0.08));
+    }
+
+    .provider-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .provider-name {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+    }
+
+    .provider-badge {
+      display: inline-flex;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .provider-description,
+    .provider-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .provider-meta {
+      margin-top: 14px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .field-card {
+      padding: 20px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--line);
+    }
+
+    .field-card.provider-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .field-meta {
+      margin-bottom: 14px;
+    }
+
+    .field-kicker {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field-title {
+      margin: 12px 0 8px;
+      font-size: 22px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .field-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
     label {
       display: block;
       margin-bottom: 8px;
-      font-weight: 500;
-      font-size: 15px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-    
-    input[type="text"], select {
+
+    input,
+    button,
+    .toggle-btn {
+      font: inherit;
+    }
+
+    input {
       width: 100%;
-      padding: 12px;
-      box-sizing: border-box;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      font-size: 15px;
-      background-color: white;
+      padding: 14px 15px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--ink);
     }
-    
-    select {
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23555555%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 12px;
+
+    input:focus-visible,
+    button:focus-visible,
+    .provider-card:focus-visible,
+    .toggle-btn:focus-visible,
+    a:focus-visible {
+      outline: 2px solid rgba(12, 91, 95, 0.25);
+      outline-offset: 2px;
     }
-    
-    button {
-      padding: 12px 20px;
-      background-color: #2563eb;
-      color: white;
+
+    .input-row {
+      position: relative;
+    }
+
+    .toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
       border: none;
-      border-radius: 6px;
+      background: transparent;
+      color: var(--accent);
       cursor: pointer;
-      font-weight: 500;
-      font-size: 15px;
-      transition: background-color 0.2s;
+      font-weight: 700;
+      padding: 6px 8px;
     }
-    
-    button:hover {
-      background-color: #1d4ed8;
-    }
-    
-    .status {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 6px;
-      display: none;
-    }
-    
-    .success {
-      background-color: #dcfce7;
-      color: #166534;
-      border-left: 4px solid #16a34a;
-    }
-    
-    .error {
-      background-color: #fee2e2;
-      color: #b91c1c;
-      border-left: 4px solid #dc2626;
-    }
-    
-    .info-section {
-      margin-top: 40px;
-      padding: 20px;
-      background-color: white;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
-    
-    .info-section h3 {
-      font-size: 18px;
-      margin-top: 0;
-      margin-bottom: 15px;
+
+    .provider-help {
+      display: inline-flex;
+      margin-top: 10px;
+      color: var(--accent);
+      font-size: 13px;
       font-weight: 600;
-    }
-    
-    .api-info {
-      margin-bottom: 12px;
-    }
-    
-    .api-info strong {
-      font-weight: 500;
-    }
-    
-    a {
-      color: #2563eb;
       text-decoration: none;
     }
-    
-    a:hover {
-      text-decoration: underline;
+
+    .save-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .status {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      border: 1px solid transparent;
+      min-width: 220px;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.info {
+      color: var(--accent);
+      background: rgba(12, 91, 95, 0.1);
+      border-color: rgba(12, 91, 95, 0.16);
+    }
+
+    .status.success {
+      color: var(--success);
+      background: rgba(28, 111, 73, 0.11);
+      border-color: rgba(28, 111, 73, 0.16);
+    }
+
+    .status.error {
+      color: var(--danger);
+      background: rgba(165, 52, 41, 0.11);
+      border-color: rgba(165, 52, 41, 0.16);
+    }
+
+    .save-btn {
+      border: none;
+      border-radius: 18px;
+      padding: 15px 22px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0d6e73 100%);
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 180px;
+    }
+
+    .test-btn {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 15px 22px;
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 180px;
+    }
+
+    .save-btn:disabled,
+    .test-btn:disabled {
+      cursor: progress;
+      opacity: 0.65;
+    }
+
+    @media (max-width: 860px) {
+      .hero,
+      .provider-grid,
+      .config-grid,
+      .field-card.provider-panel {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Article Summarizer Settings</h1>
-  
-  <div class="form-group">
-    <label for="apiType">Active AI Service</label>
-    <select id="apiType">
-      <option value="openai">OpenAI (GPT)</option>
-      <option value="gemini">Google Gemini</option>
-      <option value="deepseek">DeepSeek</option>
-    </select>
-  </div>
-  
-  <!-- OpenAI Settings -->
-  <div id="openai-settings" class="api-settings-group">
-    <h3>OpenAI Settings</h3>
-    <div class="form-group">
-      <label for="openai-apiKey">API Key</label>
-      <input type="password" id="openai-apiKey" placeholder="Enter your OpenAI API key (sk-...)">
-    </div>
-    <div class="form-group">
-      <label for="openai-model">Model Name</label>
-      <input type="text" id="openai-model" placeholder="e.g., gpt-5-nano-2025-08-07">
-    </div>
-  </div>
+  <main>
+    <section class="hero">
+      <div class="hero-card">
+        <span class="hero-kicker">Extension control room</span>
+        <h1>Route article summaries through the provider that fits the moment.</h1>
+        <p class="hero-copy">This refactored settings flow keeps the extension lightweight while giving each provider its own API port, model override, and local key storage.</p>
+      </div>
 
-  <!-- Gemini Settings -->
-  <div id="gemini-settings" class="api-settings-group">
-    <h3>Google Gemini Settings</h3>
-    <div class="form-group">
-      <label for="gemini-apiKey">API Key</label>
-      <input type="password" id="gemini-apiKey" placeholder="Enter your Google Gemini API key">
-    </div>
-    <div class="form-group">
-      <label for="gemini-model">Model Name</label>
-      <input type="text" id="gemini-model" placeholder="e.g., gemini-2.5-flash-lite">
-    </div>
-  </div>
-  
-  <!-- DeepSeek Settings -->
-  <div id="deepseek-settings" class="api-settings-group">
-    <h3>DeepSeek Settings</h3>
-    <div class="form-group">
-      <label for="deepseek-apiKey">API Key</label>
-      <input type="password" id="deepseek-apiKey" placeholder="Enter your DeepSeek API key">
-    </div>
-    <div class="form-group">
-      <label for="deepseek-model">Model Name</label>
-      <input type="text" id="deepseek-model" placeholder="e.g., deepseek-chat">
-    </div>
-  </div>
+      <aside class="info-card">
+        <p class="info-copy">What changed</p>
+        <div class="info-list">
+          <div class="info-pill">API keys are now stored in <strong>local extension storage</strong>, not synced across browsers.</div>
+          <div class="info-pill">Default models and provider wiring are centralized to reduce drift and stale configs.</div>
+          <div class="info-pill">The popup uses the same provider metadata as this page, so model labels stay consistent.</div>
+        </div>
+      </aside>
+    </section>
 
-  <button id="saveBtn">Save Settings</button>
-  
-  <div id="status" class="status"></div>
-  
-  <div class="info-section">
-    <h3>How to Get Started</h3>
-    
-    <div class="api-info">
-      <strong>OpenAI:</strong> Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API Keys</a> to create an account and generate a key.
-    </div>
-    
-    <div class="api-info">
-      <strong>Google Gemini:</strong> Visit <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> to create an account and get an API key.
-    </div>
-    
-    <div class="api-info" style="margin-top: 20px;">
-      <strong>Need help?</strong> If you encounter any issues, please create an issue on GitHub.
-    </div>
-  </div>
-  
-  <script src="js/options.js"></script>
+    <section class="settings-card">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Provider ports</h2>
+          <p class="section-copy">Choose the active provider, then set the API key and model you want the extension to use for new summaries.</p>
+        </div>
+      </div>
+
+      <div id="providerGrid" class="provider-grid"></div>
+
+      <div class="config-grid">
+        <div class="field-card">
+          <div class="field-meta">
+            <span class="field-kicker">Active route</span>
+            <h3 class="field-title">Provider selection</h3>
+            <p id="activeProviderDescription" class="field-copy"></p>
+          </div>
+          <div class="field-copy">
+            The popup will send new summarize requests through <strong id="activeProviderName">OpenAI</strong>.
+          </div>
+        </div>
+
+        <div class="field-card">
+          <div class="field-meta">
+            <span class="field-kicker">Storage</span>
+            <h3 class="field-title">Security posture</h3>
+            <p class="field-copy">This extension keeps provider keys in local browser storage for the current profile only. Models and selected provider live alongside them for simpler migration and fewer split-state bugs.</p>
+          </div>
+        </div>
+
+        <div class="field-card provider-panel">
+          <div>
+            <div class="field-meta">
+              <span id="activeProviderBadge" class="field-kicker">Responses API</span>
+              <h3 id="providerPanelTitle" class="field-title">OpenAI configuration</h3>
+              <p id="providerPanelCopy" class="field-copy"></p>
+            </div>
+
+            <div>
+              <label for="apiKeyInput">API key</label>
+              <div class="input-row">
+                <input id="apiKeyInput" type="password" autocomplete="off">
+                <button id="toggleKeyBtn" class="toggle-btn" type="button">Show</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div>
+              <label for="modelInput">Model</label>
+              <input id="modelInput" type="text" autocomplete="off">
+            </div>
+
+            <a id="providerDocsLink" class="provider-help" href="#" target="_blank" rel="noreferrer">Open provider docs</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="save-row">
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end;">
+          <button id="testBtn" class="test-btn" type="button">Test connection</button>
+          <button id="saveBtn" class="save-btn" type="button">Save settings</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/options.js"></script>
 </body>
 </html>
